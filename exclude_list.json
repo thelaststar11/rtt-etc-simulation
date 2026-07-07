@@ -1,0 +1,1 @@
+[{"config_name":"Debug","exclude_files":["board/CubeMX_Config/MDK-ARM","board/CubeMX_Config/Drivers","board/CubeMX_Config/Src/system_stm32f4xx.c","board/CubeMX_Config/Src/main.c"]}]

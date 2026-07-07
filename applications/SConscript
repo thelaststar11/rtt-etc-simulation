@@ -1,0 +1,20 @@
+from building import *
+
+cwd     = GetCurrentDir()
+src     = Glob('*.c')
+
+# 1. 将子目录中的所有 .c 源文件加入编译列表
+src += Glob('common/*.c')
+src += Glob('modules/*.c')
+src += Glob('business/*.c')
+
+# 2. 将子目录的路径加入到头文件搜索路径（CPPPATH）中
+path = [cwd]
+path += [cwd + '/common']
+path += [cwd + '/modules']
+path += [cwd + '/business']
+
+# 定义这一组源文件
+group = DefineGroup('Applications', src, depend = [''], CPPPATH = path)
+
+Return('group')
