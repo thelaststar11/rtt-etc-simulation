@@ -1,5 +1,3 @@
-/* applications/modules/motor_manager.c */
-
 #include "motor_manager.h"
 #include <rtdevice.h>
 
@@ -7,15 +5,15 @@
 #define GET_PIN(PORT, PIN)  (rt_uint8_t)((((rt_uint8_t)PORT - 'A') * 16) + PIN)
 #endif
 
-#define MOTOR_IN2_PIN       GET_PIN('A', 2)   /* PA2: TB67H450 的 IN2 */
-#define PWM_DEV_NAME        "pwm2"            /* PA3 对应的 PWM 设备 */
-#define PWM_DEV_CHANNEL     4                 /* PWM 通道号 */
-#define PWM_PERIOD_NS       50000             /* 20kHz 载波周期 (50us) */
-#define ENCODER_DEV_NAME    "pulse4"          /* PB6/PB7 正交编码器 */
+#define MOTOR_IN2_PIN       GET_PIN('A', 2)   
+#define PWM_DEV_NAME        "pwm2"            
+#define PWM_DEV_CHANNEL     4                 
+#define PWM_PERIOD_NS       50000             
+#define ENCODER_DEV_NAME    "pulse4"          
 
-#define MOTOR_GEAR_RATIO      30.0f  /* 减速比 1:30 */
-#define MOTOR_BASE_PPR        11.0f  /* 磁编码器基本脉冲 11 PPR */
-#define ENCODER_MULTIPLIER    4.0f   /* RT-Thread 默认正交解码 4 倍频 */
+#define MOTOR_GEAR_RATIO      30.0f  
+#define MOTOR_BASE_PPR        11.0f 
+#define ENCODER_MULTIPLIER    4.0f   
 
 #define TOTAL_PULSES_PER_REV  (MOTOR_BASE_PPR * MOTOR_GEAR_RATIO * ENCODER_MULTIPLIER)
 
@@ -30,11 +28,11 @@ rt_err_t motor_manager_init(void)
 {
     rt_err_t result;
 
-    /* 1. 初始化方向控制引脚 */
+    /* 初始化方向控制引脚 */
     rt_pin_mode(MOTOR_IN2_PIN, PIN_MODE_OUTPUT);
     rt_pin_write(MOTOR_IN2_PIN, PIN_LOW);
 
-    /* 2. 查找并配置 PWM 设备 */
+    /* 查找并配置 PWM 设备 */
     pwm_device = (struct rt_device_pwm *)rt_device_find(PWM_DEV_NAME);
     if (pwm_device == RT_NULL)
     {
@@ -44,7 +42,7 @@ rt_err_t motor_manager_init(void)
     rt_pwm_set(pwm_device, PWM_DEV_CHANNEL, PWM_PERIOD_NS, 0);
     rt_pwm_enable(pwm_device, PWM_DEV_CHANNEL);
 
-    /* 3. 查找并初始化正交编码器 */
+    /* 查找并初始化正交编码器 */
     encoder_device = rt_device_find(ENCODER_DEV_NAME);
     if (encoder_device == RT_NULL)
     {
@@ -140,15 +138,4 @@ float motor_get_speed_rpm(void)
     }
 
     return current_calculated_rpm;
-}
-
-/* 🔴 新增：实现彻底关闭并释放物理编码器设备 */
-void motor_disable_encoder(void)
-{
-    if (encoder_device != RT_NULL)
-    {
-        rt_device_close(encoder_device);
-        encoder_device = RT_NULL;
-        rt_kprintf("[Motor] Encoder hardware device closed and released.\n");
-    }
 }

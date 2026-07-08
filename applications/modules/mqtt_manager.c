@@ -1,12 +1,3 @@
-/*
- * Copyright (c) 2006-2021, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2026-07-03     20465       the first version
- */
 #include <rtthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,16 +10,12 @@
 #define DBG_LVL DBG_INFO
 #include <rtdbg.h>
 
-/* ==================== OneNET 参数配置 ==================== */
-// OneNET MQTT 服务器地址 (端口 1883)
 #define MQTT_URI           "tcp://7fCY77B9m6.mqtts.acc.cmcconenet.cn:1883"
 
-// 请替换为你 OneNET 上的实际信息
-#define MQTT_CLIENT_ID     "etc_device"    // 设备名称 (DeviceName)
-#define MQTT_USERNAME      "7fCY77B9m6"     // 产品ID (ProductID)
-#define MQTT_PASSWORD      "version=2018-10-31&res=products%2F7fCY77B9m6%2Fdevices%2Fetc_device&et=1830268800&method=sha1&sign=zPyegbigLKidPo4IiiDWPgKFvxI%3D"          // 使用 OneNET Token 工具生成的鉴权 Token
+#define MQTT_CLIENT_ID     "etc_device"  
+#define MQTT_USERNAME      "7fCY77B9m6"    
+#define MQTT_PASSWORD      "version=2018-10-31&res=products%2F7fCY77B9m6%2Fdevices%2Fetc_device&et=1830268800&method=sha1&sign=zPyegbigLKidPo4IiiDWPgKFvxI%3D"          
 
-// OneNET 物模型属性上报与设置 Topic ($sys/{pid}/{device-name}/thing/property/...)
 #define MQTT_PUB_TOPIC     "$sys/7fCY77B9m6/etc_device/thing/property/post"
 #define MQTT_SUB_TOPIC     "$sys/7fCY77B9m6/etc_device/thing/property/set"
 
@@ -36,7 +23,6 @@ static MQTTClient client;
 static rt_mq_t business_mq = RT_NULL;
 static rt_bool_t is_started = RT_FALSE;
 
-/* 接收云端属性设置的解析回调 */
 static void mqtt_sub_callback(MQTTClient *c, MessageData *msg_data)
 {
     if (msg_data == RT_NULL || msg_data->message == RT_NULL) return;
@@ -55,7 +41,6 @@ static void mqtt_sub_callback(MQTTClient *c, MessageData *msg_data)
     cJSON *params = cJSON_GetObjectItem(root, "params");
     if (params != RT_NULL)
     {
-        /* 仅解析物模型中已定义的内容并打印输出，不产生多余事件 */
         cJSON *balance = cJSON_GetObjectItem(params, "balance");
         if (balance) LOG_I("Cloud set balance: %f", balance->valuedouble);
 
@@ -80,7 +65,6 @@ static void mqtt_online_callback(MQTTClient *c)
 {
     LOG_I("MQTT Client Online.");
 
-    /* 触发已有的网络就绪事件，通知主业务线程 */
     if (business_mq != RT_NULL)
     {
         etc_msg_t msg;
@@ -103,11 +87,10 @@ rt_err_t mqtt_manager_init(rt_mq_t mq)
 
     rt_memset(&client, 0, sizeof(MQTTClient));
     client.uri = MQTT_URI;
-    /* 1. 首先确保初始化了 condata 连接包 */
+
     MQTTPacket_connectData condata = MQTTPacket_connectData_initializer;
     memcpy(&client.condata, &condata, sizeof(condata));
 
-    /* 2. 将连接信息赋值到 condata 子成员中（注意：是 clientID 大写 D） */
     client.condata.clientID.cstring = MQTT_CLIENT_ID;
     client.condata.username.cstring = MQTT_USERNAME;
     client.condata.password.cstring = MQTT_PASSWORD;
@@ -165,7 +148,6 @@ rt_err_t mqtt_manager_publish(const etc_data_t *data)
     cJSON *root = cJSON_CreateObject();
     if (root == RT_NULL) return -RT_ENOMEM;
 
-    // OneNET 通常需要 id 和 version 字段
     cJSON_AddStringToObject(root, "id", "123");
     cJSON_AddStringToObject(root, "version", "1.0");
 
@@ -176,7 +158,6 @@ rt_err_t mqtt_manager_publish(const etc_data_t *data)
         return -RT_ENOMEM;
     }
 
-    /* OneNET 物模型属性数据格式：{"value": xxx} */
     cJSON *balance_obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(balance_obj, "value", data->balance);
     cJSON_AddItemToObject(params, "balance", balance_obj);
@@ -203,7 +184,7 @@ rt_err_t mqtt_manager_publish(const etc_data_t *data)
     cJSON_Delete(root);
 
     if (json_str == RT_NULL) return -RT_ENOMEM;
-    /* 建议：在此处打印生成的 JSON 报文内容 */
+
     LOG_D("Publishing payload: %s", json_str);
     int ret = paho_mqtt_publish(&client, QOS1, MQTT_PUB_TOPIC, json_str);
     rt_free(json_str);

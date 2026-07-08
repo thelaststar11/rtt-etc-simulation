@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2006-2021, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 #include "task_mqtt_client.h"
 #include "mqtt_manager.h"
 #include "storage_manager.h"
@@ -16,7 +11,6 @@ static struct rt_thread mqtt_thread;
 static rt_uint8_t mqtt_stack[MQTT_THREAD_STACK_SIZE];
 static rt_mq_t local_business_mq = RT_NULL;
 
-/* 核心特性：自动后台网络状态机和异步断网续传（脱机重发）机制 */
 static void mqtt_client_thread_entry(void *parameter)
 {
     etc_log_t offline_log;
@@ -25,7 +19,6 @@ static void mqtt_client_thread_entry(void *parameter)
 
     rt_kprintf("[MQTT Task] Network daemon started.\n");
 
-    /* 1. 【新增：阻断等待，直到 Wi-Fi 成功连接并且获取到 IP】 */
     rt_kprintf("[MQTT Task] Waiting for IP address (DHCP)...\n");
     while (rt_wlan_is_ready() == RT_FALSE)  // rt_wlan_is_ready 返回真代表 IP 已分配就绪
     {
@@ -33,7 +26,6 @@ static void mqtt_client_thread_entry(void *parameter)
     }
     rt_kprintf("[MQTT Task] Network is ready! Initializing MQTT...\n");
 
-    /* 2. 网络就绪后，再初始化并启动 MQTT */
     if (mqtt_manager_init(local_business_mq) == RT_EOK)
     {
         mqtt_manager_start();
@@ -55,16 +47,16 @@ static void mqtt_client_thread_entry(void *parameter)
             rt_memset(&offline_log, 0, sizeof(etc_log_t));
             rt_memset(log_filepath, 0, sizeof(log_filepath));
 
-            /* 1. 尝试从 LittleFS 离线交易目录抽取最老的一份交易日志 */
+            /* 尝试从 LittleFS 离线交易目录抽取最老的一份交易日志 */
             if (etc_storage_get_oldest_offline_log(&offline_log, log_filepath, sizeof(log_filepath)) == RT_EOK)
             {
                 rt_kprintf("[MQTT Task] Uploading cached transaction from: %s\n", log_filepath);
 
-                /* 2. 在线重新补发至云端 */
+                /* 在线重新补发至云端 */
                 if (mqtt_manager_publish(&offline_log.data) == RT_EOK)
                 {
                     rt_kprintf("[MQTT Task] Sync success. Erasing cached transaction log.\n");
-                    /* 3. 上报成功后原子化删除脱机日志文件 */
+                    /* 上报成功后原子化删除脱机日志文件 */
                     etc_storage_delete_offline_log(log_filepath);
 
                     /* 立即循环，加速排空脱机缓存区 */

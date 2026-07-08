@@ -1,24 +1,13 @@
-/*
- * Copyright (c) 2006-2021, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2026-07-03     20465       the first version
- */
-
 #include "task_rfid.h"
 #include "rfid_manager.h"
 #include "etc_types.h"
 
-#define RFID_THREAD_STACK_SIZE   1536
+#define RFID_THREAD_STACK_SIZE   2048
 #define RFID_THREAD_PRIORITY     15
 
 static rt_thread_t rfid_thread = RT_NULL;
 static rt_mq_t rfid_mq = RT_NULL;
 
-/* 处于应用层的主动扫卡业务线程 */
 static void rfid_thread_entry(void *parameter)
 {
     char uid_str[16];

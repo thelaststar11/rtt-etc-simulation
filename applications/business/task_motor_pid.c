@@ -20,7 +20,7 @@ typedef struct {
 static struct rt_thread motor_pid_thread;
 static rt_uint8_t motor_pid_stack[PID_THREAD_STACK_SIZE];
 
-/* 恒速环增量式 PID 控制参数（基于脉冲数控制） */
+/* 恒速环增量式 PID 控制参数 */
 static pid_ctrl_t speed_pid = {
     .kp = 0.85f,
     .ki = 0.20f,
@@ -30,12 +30,9 @@ static pid_ctrl_t speed_pid = {
 };
 
 /* ==================== 转速变量定义 ==================== */
-static float target_speed_rpm = 22.7f;     /* 默认目标物理转速：272.7 RPM */
+static float target_speed_rpm = 22.7f;     /* 默认目标物理转速：22.7 RPM */
 static rt_int32_t target_speed_pps = 10;   /* 内部换算出的目标脉冲数 */
 static rt_bool_t is_running = RT_FALSE;      /* 默认开机不启动传送带转动 */
-
-static rt_uint32_t sensor_fail_timer = 0; /* 传感器失效计时器 */
-static rt_bool_t is_sensor_failed = RT_FALSE; /* 传感器失效标志 */
 
 static void motor_pid_thread_entry(void *parameter)
 {
@@ -55,34 +52,26 @@ static void motor_pid_thread_entry(void *parameter)
             rt_int32_t actual_speed = current_count - last_count;
             last_count = current_count;
 
-            /* ==================== 核心修正 1：处理 32767 过零点数学溢出 ==================== */
+            /* 处理 32767 过零点数学溢出 */
             if (actual_speed > 16384)  actual_speed -= 32768;
             if (actual_speed < -16384) actual_speed += 32768;
 
-            /* ==================== 核心修正 2：极性翻转开关（防止方向相反导致正反馈狂飙） ==================== */
-            /* 🔴 提示：如果修改代码后电机依然猛转然后报错，请将下面的 0 改为 1 */
-            #define ENCODER_POLARITY_REVERSE   0
-            #if ENCODER_POLARITY_REVERSE
-            actual_speed = -actual_speed;
-            #endif
+            rt_int32_t error = target_speed_pps - actual_speed;
 
-                /* 正常闭环 PID 调节 */
-                rt_int32_t error = target_speed_pps - actual_speed;
+            float delta_u = speed_pid.kp * (error - speed_pid.last_error) +
+            speed_pid.ki * error +
+            speed_pid.kd * (error - 2 * speed_pid.last_error + speed_pid.prev_error);
 
-                float delta_u = speed_pid.kp * (error - speed_pid.last_error) +
-                                speed_pid.ki * error +
-                                speed_pid.kd * (error - 2 * speed_pid.last_error + speed_pid.prev_error);
+            speed_pid.prev_error = speed_pid.last_error;
+            speed_pid.last_error = error;
 
-                speed_pid.prev_error = speed_pid.last_error;
-                speed_pid.last_error = error;
+            current_duty += delta_u;
 
-                current_duty += delta_u;
+            /* 占空比限幅 */
+            if (current_duty > 100.0f) current_duty = 100.0f;
+            if (current_duty < 0.0f)   current_duty = 0.0f;
 
-                /* 占空比限幅 */
-                if (current_duty > 100.0f) current_duty = 100.0f;
-                if (current_duty < 0.0f)   current_duty = 0.0f;
-
-                motor_set_speed((rt_int8_t)current_duty);
+            motor_set_speed((rt_int8_t)current_duty);
         }
         else
         {
@@ -127,19 +116,17 @@ void task_motor_set_running(rt_bool_t run)
     is_running = run;
 }
 
-/* 接收标准转速 RPM，在内部安全转换为脉冲数 */
+
 void task_motor_set_target_speed(float speed_rpm)
 {
     target_speed_rpm = speed_rpm;
     target_speed_pps = (rt_int32_t)(speed_rpm * 0.44f);
 }
 
-
-/* ==================== MSH FinSH 调试命令 ==================== */
 #ifdef RT_USING_FINSH
 #include <finsh.h>
 
-/* 1. 控制电机启停命令 */
+/* 控制电机启停命令 */
 static void cmd_motor_run(int argc, char **argv)
 {
     if (argc < 2)
@@ -155,7 +142,7 @@ static void cmd_motor_run(int argc, char **argv)
 }
 MSH_CMD_EXPORT_ALIAS(cmd_motor_run, motor_run, Set motor run state: 0-Stop 1-Run);
 
-/* 2. 调整目标速度 */
+/* 调整目标速度 */
 static void cmd_motor_speed(int argc, char **argv)
 {
     if (argc < 2)
@@ -171,7 +158,7 @@ static void cmd_motor_speed(int argc, char **argv)
 }
 MSH_CMD_EXPORT_ALIAS(cmd_motor_speed, motor_speed, Set motor target speed in RPM);
 
-/* 3. 查看当前电机与编码器状态命令 */
+/* 查看当前电机与编码器状态命令 */
 static void cmd_motor_status(int argc, char **argv)
 {
     float actual_rpm = motor_get_speed_rpm();
@@ -185,7 +172,7 @@ static void cmd_motor_status(int argc, char **argv)
 }
 MSH_CMD_EXPORT_ALIAS(cmd_motor_status, motor_status, Get motor running status in RPM);
 
-/* 4. 动态调整 PID 控制参数命令 */
+/* 动态调整 PID 控制参数命令 */
 static void cmd_motor_pid(int argc, char **argv)
 {
     if (argc < 4)

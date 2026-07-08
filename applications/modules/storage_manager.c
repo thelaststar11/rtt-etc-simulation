@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2006-2021, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 #include "storage_manager.h"
 #include <rtthread.h>
 #include <string.h>
@@ -106,7 +101,6 @@ rt_err_t etc_storage_read_user(const char *uid, etc_data_t *data)
     return result;
 }
 
-/* 核心特性：基于写时复制 (CoW) 与重命名的原子写操作，避免掉电损坏数据文件 */
 rt_err_t etc_storage_write_user(const char *uid, const etc_data_t *data)
 {
     rt_err_t result = -RT_ERROR;

@@ -1,5 +1,3 @@
-/* applications/business/etc_app.c */
-
 #include "etc_app.h"
 #include "etc_types.h"
 #include "storage_manager.h"
@@ -82,11 +80,9 @@ static void etc_app_thread_entry(void *parameter)
                         rt_kprintf("[ETC App] Process rejected: Card Unregistered!\n");
                     }
 
-                    /* 2. 🔴 无论扣费结果如何、系统是否在线，统一让电机停止转动 3 秒钟（3000ms） */
                     rt_kprintf("[ETC App] Waiting 3 seconds for vehicle/conveyor... \n");
                     rt_thread_mdelay(3000);
 
-                    /* 3. 🔴 延迟结束后重新启动电机运转，恢复到默认状态 */
                     rt_kprintf("[ETC App] Restarting motor...\n");
                     task_motor_set_running(RT_TRUE);
 

@@ -1,10 +1,10 @@
 #include <rtthread.h>
-#include <wlan_mgnt.h>  /* RT-Thread 标准 WLAN 框架头文件 */
+#include <wlan_mgnt.h>  
 #include <wlan_prot.h>
 #include <wlan_cfg.h>
 
-#define WIFI_SSID       "iQOO Neo7 SE"  // 替换为您手机热点的名称
-#define WIFI_PASSWORD   "li15850158873"      // 替换为您手机热点的密码
+#define WIFI_SSID       "iQOO Neo7 SE" 
+#define WIFI_PASSWORD   "li15850158873"      
 
 static void wifi_connect_entry(void *parameter)
 {
@@ -13,7 +13,7 @@ static void wifi_connect_entry(void *parameter)
 
     rt_kprintf("[WIFI] Preparing to connect to hotspot: %s\n", WIFI_SSID);
 
-    /* 开启 WLAN 自动重连机制（断开后会自动重连） */
+    /* 开启 WLAN 自动重连机制 */
     rt_wlan_config_autoreconnect(RT_TRUE);
 
     /* 阻塞式连接指定的 Wi-Fi 热点 */
@@ -42,5 +42,5 @@ int wifi_auto_connect_init(void)
     }
     return 0;
 }
-/* 导出为应用层自动初始化，系统启动时会自动调用此函数 */
+
 INIT_APP_EXPORT(wifi_auto_connect_init);
